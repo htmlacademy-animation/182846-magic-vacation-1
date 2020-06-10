@@ -19,3 +19,15 @@
     transform: translate3d(0, 0, 0);
   }
 }
+
+@keyframes textSlider {
+  0% {
+    opacity: 0;
+    transform: translate3d(30px, 0, 0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
