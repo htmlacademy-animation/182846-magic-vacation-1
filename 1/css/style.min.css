@@ -1348,6 +1348,7 @@ img {
   line-height: 1.2;
   color: #5f458c;
   border: 0;
+  border-radius: 3rem;
   outline: none;
   transform: translate3d(100%, 0, 0); }
   .form__field:focus {
@@ -1368,7 +1369,7 @@ img {
       height: 4rem;
       font-size: 1.6rem; } }
   .active .form__field {
-    animation: formField 0.6s linear forwards; }
+    animation: appearFormField 0.6s linear forwards; }
 
 .form__button {
   flex-grow: 1; }
@@ -1607,7 +1608,7 @@ img {
   font-size: 2.4rem;
   line-height: 1.27;
   opacity: 0;
-  transform: translate3d(0, 30px, 0); }
+  transform: translate3d(0, 2rem, 0); }
   @media (min-width: 2000px) {
     .intro__message {
       width: 509px;
@@ -1876,7 +1877,7 @@ img {
     display: block;
     color: inherit;
     padding: 0 0.5em 0.5em;
-    transition: color 0.3s ease; }
+    transition: color 0.35s ease; }
     .page-header__menu a::after {
       content: "";
       position: absolute;
@@ -1885,7 +1886,7 @@ img {
       height: 2px;
       background-color: #ffffff;
       right: 0;
-      transition: width 0.3s ease, background-color 0.3s ease; }
+      transition: width 0.35s ease, background-color 0.5s ease; }
       @media (max-width: 1024px) and (orientation: portrait) {
         .page-header__menu a::after {
           left: 0;
@@ -1898,7 +1899,7 @@ img {
           background-color: #5f458c; } }
     .page-header__menu a.active::after {
       left: 0;
-      animation: activePoint 0.6s forwards; }
+      animation: appearActivePoint 0.6s forwards; }
     .page-header__menu a:hover, .page-header__menu a:focus {
       color: #a67ee5;
       outline: none; }
@@ -2971,7 +2972,7 @@ img {
   font-size: 1.8rem;
   line-height: 2rem;
   opacity: 0;
-  transform: translate3d(30px, 0, 0); }
+  transform: translate3d(2rem, 0, 0); }
   @media (min-width: 2000px) {
     .slider__item-text {
       margin-top: 36px;
@@ -2997,9 +2998,9 @@ img {
       font-size: 1.4rem;
       line-height: 1.5rem; } }
   .swiper-slide-active .slider__item-text {
-    animation: textSlider 0.9s ease-out forwards; }
+    animation: fadeTextSlider 0.9s ease-out forwards; }
   .swiper-slide-next .slider__item-text {
-    animation: textSlider 0.6s ease-out 0.6s forwards; }
+    animation: fadeTextSlider 0.6s ease-out 0.6s forwards; }
 
 .slider__controls {
   position: absolute;
@@ -3171,7 +3172,7 @@ img {
     background-color: #ffffff;
     border: 2px solid #ffffff;
     z-index: -1;
-    transition: width 0.3s ease, height 0.3s ease; }
+    transition: transform 0.35s ease; }
   .social-block__toggler svg {
     position: absolute;
     top: 50%;
@@ -3185,8 +3186,7 @@ img {
     color: #a67ee5; }
     .social-block__toggler:hover::before,
     .social-block--active .social-block__toggler::before {
-      width: 112.5%;
-      height: 112.5%; }
+      transform: translate3d(-50%, -50%, 0) scale(1.125); }
   .social-block__toggler:focus {
     color: #a67ee5;
     outline: none; }
@@ -3213,7 +3213,7 @@ img {
   margin-top: 1.5rem;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease; }
+  transition: opacity 0.15s ease; }
   @media (min-width: 2000px) {
     .social-block__list {
       margin-top: 15px; } }
@@ -3256,7 +3256,16 @@ img {
     pointer-events: auto; }
   .social-block__list li {
     flex: none;
-    margin-bottom: 0.5rem; }
+    margin-bottom: 0.5rem;
+    opacity: 0;
+    transform: translate3d(0, 0.5rem, 0);
+    transition: opacity 0.35s ease, transform 0.35s ease; }
+    .social-block__list li:nth-child(1) {
+      transition-delay: 0.15s; }
+    .social-block__list li:nth-child(2) {
+      transition-delay: 0.3s; }
+    .social-block__list li:nth-child(3) {
+      transition-delay: 0.45s; }
     @media (min-width: 2000px) {
       .social-block__list li {
         margin-bottom: 5px; } }
@@ -3266,6 +3275,9 @@ img {
     @media (max-width: 768px) and (orientation: landscape) {
       .social-block__list li {
         margin: 0 1.25rem; } }
+    .social-block--active .social-block__list li {
+      opacity: 1;
+      transform: translate3d(0, 0, 0); }
 
 .social-block__link {
   position: relative;
@@ -3275,7 +3287,7 @@ img {
   color: #ffffff;
   border: 2px solid transparent;
   border-radius: 50%;
-  transition: color 0.3s ease; }
+  transition: color 0.35s ease; }
   @media (min-width: 2000px) {
     .social-block__link {
       width: 40px;
@@ -3326,7 +3338,7 @@ img {
         width: 10px;
         height: 10px; } }
 
-@keyframes activePoint {
+@keyframes appearActivePoint {
   0% {
     width: 0; }
   100% {
@@ -3335,20 +3347,20 @@ img {
 @keyframes fadeMessage {
   0% {
     opacity: 0;
-    transform: translate3d(0, 30px, 0); }
+    transform: translate3d(0, 2rem, 0); }
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0); } }
 
-@keyframes textSlider {
+@keyframes fadeTextSlider {
   0% {
     opacity: 0;
-    transform: translate3d(30px, 0, 0); }
+    transform: translate3d(2rem, 0, 0); }
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0); } }
 
-@keyframes formField {
+@keyframes appearFormField {
   0% {
     transform: translate3d(100%, 0, 0); }
   100% {
