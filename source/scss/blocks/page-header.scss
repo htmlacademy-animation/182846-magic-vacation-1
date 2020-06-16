@@ -269,7 +269,7 @@
     &.active {
       &::after {
         left: 0;
-        animation: activePoint 0.6s forwards;
+        animation: appearActivePoint 0.6s forwards;
       }
     }
 
