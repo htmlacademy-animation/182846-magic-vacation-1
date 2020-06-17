@@ -96,6 +96,8 @@
   max-width: 34rem;
   font-size: 1.8rem;
   line-height: 2rem;
+  opacity: 0;
+  transform: translate3d(2rem, 0, 0);
 
   @media (min-width: $stop-scaling) {
     margin-top: 36px;
@@ -122,6 +124,14 @@
     min-height: 14rem;
     font-size: 1.4rem;
     line-height: 1.5rem;
+  }
+
+  .swiper-slide-active & {
+    animation: fadeTextSlider 0.9s ease-out forwards;
+  }
+
+  .swiper-slide-next & {
+    animation: fadeTextSlider 0.6s ease-out 0.6s forwards;
   }
 }
 
