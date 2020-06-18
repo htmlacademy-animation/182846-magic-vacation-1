@@ -95,7 +95,7 @@
   }
 
   .active & {
-    animation: appearFormField 0.6s linear forwards;
+    animation: appearFormField $duration-middle linear forwards;
   }
 }
 

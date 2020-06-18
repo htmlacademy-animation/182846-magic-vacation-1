@@ -35,12 +35,12 @@
     background-color: $c-light;
     border: 2px solid $c-light;
     z-index: -1;
-    transition: transform 0.35s ease;
+    transition: transform $duration-short ease;
   }
 
   .load & {
     &::before {
-      animation: increaseSocialToggler 0.6s cubic-bezier(0.6,-0.25,0.2,1.75) 0.3s;
+      animation: increaseSocialToggler $duration-middle cubic-bezier(0.6,-0.25,0.2,1.75) $delay;
     }
   }
 
@@ -154,18 +154,19 @@
     margin-bottom: 0.5rem;
     opacity: 0;
     transform: translate3d(0, 0.5rem, 0);
-    transition: opacity 0.35s ease, transform 0.35s ease;
+    transition: opacity $duration-short ease,
+                transform $duration-short ease;
 
     &:nth-child(1) {
-      transition-delay: 0.15s;
+      transition-delay: $delay/2;
     }
 
     &:nth-child(2) {
-      transition-delay: 0.3s;
+      transition-delay: $delay;
     }
 
     &:nth-child(3) {
-      transition-delay: 0.45s;
+      transition-delay: $delay*1.5;
     }
 
     @media (min-width: $stop-scaling) {
@@ -195,7 +196,7 @@
   color: $c-light;
   border: 2px solid transparent;
   border-radius: 50%;
-  transition: color 0.35s ease;
+  transition: color $duration-short ease;
 
   @media (min-width: $stop-scaling) {
     width: 40px;

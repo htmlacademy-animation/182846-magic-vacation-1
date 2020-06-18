@@ -37,7 +37,8 @@
   color: $c-light;
   opacity: 0;
   transform: translateX(-10%);
-  transition: opacity 0.6s cubic-bezier(0.4,0.9,0.5,1) 0.3s, transform 0.6s cubic-bezier(0.4,0.9,0.5,1) 0.3s;
+  transition: opacity $duration-middle $bezier-curve $delay,
+              transform $duration-middle $bezier-curve $delay;
 
   @media (min-width: $stop-scaling) {
     top: -5px;
@@ -139,7 +140,7 @@
   display: flex;
   align-items: center;
   opacity: 0;
-  transition: opacity 0.6s cubic-bezier(0.4,0.9,0.5,1) 0.3s;
+  transition: opacity $duration-middle $bezier-curve $delay;
 
   @media (max-width: $tablet) and (orientation: portrait) {
     position: fixed;
@@ -255,7 +256,7 @@
     display: block;
     color: inherit;
     padding: 0 0.5em 0.5em;
-    transition: color 0.35s ease;
+    transition: color $duration-short ease;
 
     &::after {
       content: "";
@@ -265,7 +266,8 @@
       height: 2px;
       background-color: $c-light;
       right: 0;
-      transition: width 0.35s ease, background-color 0.5s ease;
+      transition: width $duration-short ease,
+                  background-color $duration-short ease;
 
       @media (max-width: $tablet) and (orientation: portrait) {
         left: 0;
@@ -284,7 +286,7 @@
       &.active {
         &::after {
           left: 0;
-          animation: appearActivePoint 0.6s forwards 0.3s;
+          animation: appearActivePoint $duration-middle forwards $delay;
         }
       }
     }
