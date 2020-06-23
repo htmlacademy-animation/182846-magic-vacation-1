@@ -1896,7 +1896,7 @@ img {
       height: 2px;
       background-color: #ffffff;
       right: 0;
-      transition: width 0.35s ease, background-color 0.5s ease; }
+      transition: width 0.35s ease, background-color 0.35s ease; }
       @media (max-width: 1024px) and (orientation: portrait) {
         .page-header__menu a::after {
           left: 0;
@@ -3186,10 +3186,9 @@ img {
     background-color: #ffffff;
     border: 2px solid #ffffff;
     z-index: -1;
-    transform: translate3d(-50%, -50%, 0) scale(0);
-    transition: transform 0.6s ease; }
+    transition: transform 0.35s ease; }
   .load .social-block__toggler::before {
-    transform: translate3d(-50%, -50%, 0) scale(1); }
+    animation: increaseSocialToggler 0.6s cubic-bezier(0.6, -0.25, 0.2, 1.75) 0.3s; }
   .social-block__toggler svg {
     position: absolute;
     top: 50%;
@@ -3382,6 +3381,12 @@ img {
     transform: translate3d(100%, 0, 0); }
   100% {
     transform: translate3d(0, 0, 0); } }
+
+@keyframes increaseSocialToggler {
+  0% {
+    transform: translate3d(-50%, -50%, 0) scale(0); }
+  100% {
+    transform: translate3d(-50%, -50%, 0) scale(1); } }
 
 
 /*# sourceMappingURL=style.min.css.map*/
