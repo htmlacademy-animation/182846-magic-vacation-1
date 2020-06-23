@@ -35,6 +35,10 @@
   padding: 1rem 0;
   width: 10rem;
   color: $c-light;
+  opacity: 0;
+  transform: translateX(-10%);
+  transition: opacity $duration-middle $bezier-curve $delay,
+              transform $duration-middle $bezier-curve $delay;
 
   @media (min-width: $stop-scaling) {
     top: -5px;
@@ -62,6 +66,11 @@
     .page-header--menu-opened & {
       color: $c-dark;
     }
+  }
+
+  .load & {
+    opacity: 1;
+    transform: translateX(0);
   }
 
   svg {
@@ -130,6 +139,8 @@
 .page-header__nav {
   display: flex;
   align-items: center;
+  opacity: 0;
+  transition: opacity $duration-middle $bezier-curve $delay;
 
   @media (max-width: $tablet) and (orientation: portrait) {
     position: fixed;
@@ -167,6 +178,10 @@
     .page-header--menu-opened & {
       transform: translateX(0);
     }
+  }
+
+  .load & {
+    opacity: 1;
   }
 }
 
@@ -241,7 +256,7 @@
     display: block;
     color: inherit;
     padding: 0 0.5em 0.5em;
-    transition: color 0.35s ease;
+    transition: color $duration-short ease;
 
     &::after {
       content: "";
@@ -251,7 +266,8 @@
       height: 2px;
       background-color: $c-light;
       right: 0;
-      transition: width 0.35s ease, background-color 0.5s ease;
+      transition: width $duration-short ease,
+                  background-color $duration-short ease;
 
       @media (max-width: $tablet) and (orientation: portrait) {
         left: 0;
@@ -266,10 +282,12 @@
       }
     }
 
-    &.active {
-      &::after {
-        left: 0;
-        animation: appearActivePoint 0.6s forwards;
+    .load & {
+      &.active {
+        &::after {
+          left: 0;
+          animation: appearActivePoint $duration-middle forwards $delay;
+        }
       }
     }
 

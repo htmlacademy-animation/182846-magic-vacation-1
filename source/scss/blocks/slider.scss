@@ -131,7 +131,7 @@
   }
 
   .swiper-slide-next & {
-    animation: fadeTextSlider 0.6s ease-out 0.6s forwards;
+    animation: fadeTextSlider $duration-middle ease-out 0.6s forwards;
   }
 }
 
