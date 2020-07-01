@@ -87,7 +87,7 @@
   }
 
   .active & {
-    animation: fadeMessage $duration-middle ease $delay forwards;
+    animation: fadeMessage $duration-middle ease $delay both;
   }
 }
 
