@@ -38,17 +38,6 @@ export default () => {
       this.element.innerHTML = ``;
       this.element.appendChild(content);
     }
-
-    runAnimation() {
-      if (!this.element) {
-        return;
-      }
-      this.element.classList.add(`title-animation--active`);
-    }
-
-    destroyAnimation() {
-      this.element.classList.remove(`title-animation--active`);
-    }
   }
 
   const titleIntro = new TitleAnimation(`.intro__title`, 600, `transform`, 600);

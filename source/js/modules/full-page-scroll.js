@@ -62,7 +62,7 @@ export default class FullPageScroll {
       });
 
       this.screenElements[this.activeScreen].classList.remove(`screen--hidden`);
-      setTimeout(() => this.screenElements[this.activeScreen].classList.add(`active`), 50);
+      setTimeout(() => this.screenElements[this.activeScreen].classList.add(`active`), 0);
     }
   }
 
