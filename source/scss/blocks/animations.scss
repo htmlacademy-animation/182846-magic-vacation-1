@@ -93,3 +93,27 @@
     transform: translate3d(0, 0, 0);
   }
 }
+
+@keyframes moveSliderControlPrev {
+  0% {
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0) rotate(-90deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0);
+  }
+}
+
+@keyframes moveSliderControlNext {
+  0% {
+    opacity: 0;
+    transform: translate3d(100%, 0, 0) rotate(90deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0);
+  }
+}
