@@ -229,6 +229,16 @@
     opacity: 0.5;
     pointer-events: none;
   }
+
+  .active & {
+    &--prev {
+      animation: moveSliderControlPrev $duration-middle ease $delay*2 both;
+    }
+
+    &--next {
+      animation: moveSliderControlNext $duration-middle ease $delay*2 both;
+    }
+  }
 }
 
 .slider__pagination.swiper-pagination {
