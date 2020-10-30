@@ -54,6 +54,12 @@ export default class FullPageScroll {
         this.screenElements[this.activeScreen].classList.remove(`screen--hidden`);
         setTimeout(() => this.screenElements[this.activeScreen].classList.add(`active`), 50);
       }, 550);
+
+      setTimeout(() => {
+        document.querySelectorAll(`.prize-animate`).forEach((el) => {
+          el.src = el.dataset.src + `?${Date.now()}`;
+        });
+      }, 550);
     } else {
       this.curtain.classList.remove(`curtain--active`);
       this.screenElements.forEach((screen) => {
