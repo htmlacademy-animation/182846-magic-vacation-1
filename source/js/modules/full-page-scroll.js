@@ -56,11 +56,11 @@ export default class FullPageScroll {
       }, 550);
 
       setTimeout(() => {
-        document.querySelectorAll('.prize-animate').forEach((el, i) => {
+        document.querySelectorAll(`.prize-animate`).forEach((el, i) => {
           setTimeout(() => {
             el.src = el.dataset.src + `?${Date.now()}`;
-          }, 3500 * i)
-        })
+          }, 3500 * i);
+        });
       }, 550);
     } else {
       this.curtain.classList.remove(`curtain--active`);
