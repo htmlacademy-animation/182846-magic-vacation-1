@@ -331,9 +331,9 @@
       <animateTransform
         attributeName="transform"
         type="rotate"
-        values="5 150 330; -5 150 330; 3 150 330; -3 150 330; 0 150 330"
+        values="0 150 330; 3 150 330; -3 150 330; 2 150 330; -2 150 330; 0 150 330"
         begin="2s"
-        dur="1s"
+        dur="2s"
         additive="sum"
         repeatCount="indefinite" />
       <path d="M79.18,194A131,131,0,0,1,94.77,220.9a255,255,0,0,1-20.08-23.55,259,259,0,0,1-17.07-25.88A131.72,131.72,0,0,1,79.18,194" fill="#36e69a"/>
