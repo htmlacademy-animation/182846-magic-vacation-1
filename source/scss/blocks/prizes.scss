@@ -130,7 +130,6 @@
     .prizes__icon {
       position: relative;
       left: -5.9rem;
-      bottom: -1.4rem;
       width: 26.8rem;
 
       @media (min-width: $stop-scaling) {
@@ -170,6 +169,7 @@
 
     .prizes__icon {
       width: 18.8rem;
+      transform: translateX(-140px);
 
       @media (min-width: $stop-scaling) {
         width: 188px;
@@ -197,6 +197,7 @@
 
     .prizes__icon {
       width: 26rem;
+      transform: translateX(-40px);
 
       @media (min-width: $stop-scaling) {
         width: 260px;
@@ -224,7 +225,7 @@
 
   img {
     display: block;
-    width: 100%;
+    max-width: none;
     height: auto;
   }
 }
