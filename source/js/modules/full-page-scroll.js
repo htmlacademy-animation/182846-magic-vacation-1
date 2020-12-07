@@ -1,4 +1,5 @@
 import throttle from 'lodash/throttle';
+import countdownTimer from './countdown-timer.js';
 
 export default class FullPageScroll {
   constructor() {
@@ -62,7 +63,18 @@ export default class FullPageScroll {
           }, 3500 * i);
         });
       }, 550);
-    } else {
+    } else if (this.activeScreen === 4) {
+      countdownTimer();
+
+      this.curtain.classList.remove(`curtain--active`);
+      this.screenElements.forEach((screen) => {
+        screen.classList.add(`screen--hidden`);
+        screen.classList.remove(`active`);
+      });
+      this.screenElements[this.activeScreen].classList.remove(`screen--hidden`);
+      setTimeout(() => this.screenElements[this.activeScreen].classList.add(`active`), 0);
+    }
+    else {
       this.curtain.classList.remove(`curtain--active`);
       this.screenElements.forEach((screen) => {
         screen.classList.add(`screen--hidden`);
