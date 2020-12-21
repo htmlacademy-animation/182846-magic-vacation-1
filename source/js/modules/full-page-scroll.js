@@ -1,5 +1,6 @@
 import throttle from 'lodash/throttle';
 import countdownTimer from './countdown-timer.js';
+import animatingNumbers from './animating-numbers.js';
 
 export default class FullPageScroll {
   constructor() {
@@ -61,6 +62,8 @@ export default class FullPageScroll {
           setTimeout(() => {
             el.src = el.dataset.src + `?${Date.now()}`;
           }, 3500 * i);
+
+          animatingNumbers();
         });
       }, 550);
     } else if (this.activeScreen === 4) {
