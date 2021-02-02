@@ -12,6 +12,7 @@ import pageLoad from './modules/page-load.js';
 import rules from './modules/rules.js';
 import titleAnimation from './modules/title-animation.js';
 import headingAnimation from './modules/heading-animation.js';
+import WalrusScene from './modules/walrus-canvas-animation.js';
 
 // init modules
 mobileHeight();
@@ -29,3 +30,9 @@ headingAnimation();
 
 const fullPageScroll = new FullPageScroll();
 fullPageScroll.init();
+
+const animationWalrus = new WalrusScene({
+  canvas: `#walrus-canvas`
+});
+
+animationWalrus.startAnimation();
