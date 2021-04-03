@@ -10107,273 +10107,215 @@ module.exports = code;
 
 /***/ }),
 
-/***/ "./source/js/helpers/animate.js":
-/*!**************************************!*\
-  !*** ./source/js/helpers/animate.js ***!
-  \**************************************/
-/*! exports provided: animateEasing, animateProgress, animateDuration */
+/***/ "./source/js/helpers/animation.js":
+/*!****************************************!*\
+  !*** ./source/js/helpers/animation.js ***!
+  \****************************************/
+/*! exports provided: default */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "animateEasing", function() { return animateEasing; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "animateProgress", function() { return animateProgress; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "animateDuration", function() { return animateDuration; });
-// animation using raf (render function parameter is value from easing function)
-const animateEasing = (render, duration, easing) => new Promise((resolve) => {
-  const start = Date.now();
-  (function loop() {
-    const p = (Date.now() - start) / duration;
-    if (p > 1) {
-      render(1);
-      // set that animation end
-      resolve();
-    } else {
-      requestAnimationFrame(loop);
-      render(easing(p));
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return Animation; });
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils.js */ "./source/js/helpers/utils.js");
+
+
+
+class Animation {
+  constructor(options) {
+    this.options = options;
+
+    if (!this.options.easing) {
+      this.options.easing = _utils_js__WEBPACK_IMPORTED_MODULE_0__["default"].easeLinear;
     }
-  }());
-});
 
-// animation using raf (render function parameter is progress from 0 to 1)
-const animateProgress = (render, duration) => new Promise((resolve) => {
-  const start = Date.now();
-  (function loop() {
-    const p = (Date.now() - start) / duration;
-    if (p > 1) {
-      render(1);
-      // set that animation end
-      resolve();
-    } else {
-      requestAnimationFrame(loop);
-      render(p);
+    if (!this.options.duration) {
+      this.options.duration = 1000;
     }
-  }());
-});
 
-// animation using raf (render function parameter is progress from 0 to 1)
-const animateDuration = (render, duration) => new Promise((resolve) => {
-  const start = Date.now();
-  (function loop() {
-    const p = Date.now() - start;
-    if (p > duration) {
-      render(duration);
-      // set that animation end
-      resolve();
-    } else {
-      requestAnimationFrame(loop);
-      render(p);
+    if (!this.options.delay) {
+      this.options.delay = 0;
     }
-  }());
-});
+
+    if (!this.options.fps) {
+      this.options.fps = 60;
+    }
+
+    this.timeoutId = null;
+    this.requestId = null;
+  }
 
 
+  start(options) {
+    this.stop();
+
+    this.timeoutId = setTimeout(() => {
+      this.startTime = performance.now();
+      this.interval = 1000 / this.options.fps;
+      this.lastFrameTime = this.startTime;
+      this.isFinished = false;
+
+      let animateFrame;
+
+      if (this.options.duration === `infinite`) {
+        animateFrame = (currentTime) => {
+          this.requestId = requestAnimationFrame(animateFrame);
+
+          const delta = currentTime - this.lastFrameTime;
+
+          if (delta > this.interval) {
+            this.options.func(1, {
+              startTime: this.startTime,
+              currentTime,
+              isFinished: false,
+              options
+            });
+
+            this.lastFrameTime = currentTime - delta % this.interval;
+          }
+        };
+      } else {
+        animateFrame = (currentTime) => {
+          this.requestId = requestAnimationFrame(animateFrame);
+
+          const delta = currentTime - this.lastFrameTime;
+
+          if (delta > this.interval) {
+            let timeFraction = (currentTime - this.startTime) / this.options.duration;
+
+            if (timeFraction > 1) {
+              timeFraction = 1;
+              this.isFinished = true;
+            }
+
+            if (timeFraction <= 1) {
+              const progress = this.options.easing(timeFraction);
+
+              this.options.func(progress, {
+                startTime: this.startTime,
+                currentTime,
+                isFinished: this.isFinished,
+                options
+              });
+
+              this.lastFrameTime = currentTime - delta % this.interval;
+            }
+
+            if (this.isFinished) {
+              this.stop();
+
+              if (typeof this.options.callback === `function`) {
+                this.options.callback();
+              }
+            }
+          }
+        };
+      }
+
+      this.requestId = requestAnimationFrame(animateFrame);
+    }, this.options.delay);
+  }
+
+
+  restart() {
+    this.start();
+  }
+
+
+  stop() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+    }
+
+    if (this.requestId) {
+      cancelAnimationFrame(this.requestId);
+    }
+  }
+}
 
 
 /***/ }),
 
-/***/ "./source/js/helpers/cubic-bezier.js":
-/*!*******************************************!*\
-  !*** ./source/js/helpers/cubic-bezier.js ***!
-  \*******************************************/
-/*! exports provided: bezierEasing */
+/***/ "./source/js/helpers/utils.js":
+/*!************************************!*\
+  !*** ./source/js/helpers/utils.js ***!
+  \************************************/
+/*! exports provided: default */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "bezierEasing", function() { return bezierEasing; });
-// These values are established by empiricism with tests (tradeoff: performance VS precision)
-const NEWTON_ITERATIONS = 4;
-const NEWTON_MIN_SLOPE = 0.001;
-const SUBDIVISION_PRECISION = 0.0000001;
-const SUBDIVISION_MAX_ITERATIONS = 10;
-
-const kSplineTableSize = 11;
-const kSampleStepSize = 1.0 / (kSplineTableSize - 1.0);
-
-const float32ArraySupported = `Float32Array` in window;
-
-function a(aA1, aA2) {
-  return 1.0 - 3.0 * aA2 + 3.0 * aA1;
+function easeLinear(x) {
+  return x;
 }
 
-function b(aA1, aA2) {
-  return 3.0 * aA2 - 6.0 * aA1;
+
+function easeInCubic(x) {
+  return x * x * x;
 }
 
-function c(aA1) {
-  return 3.0 * aA1;
+
+function easeOutCubic(x) {
+  return 1 - Math.pow(1 - x, 3);
 }
 
-// Returns x(t) given t, x1, and x2, or y(t) given t, y1, and y2.
-function calcBezier(aT, aA1, aA2) {
-  return ((a(aA1, aA2) * aT + b(aA1, aA2)) * aT + c(aA1)) * aT;
-}
 
-// Returns dx/dt given t, x1, and x2, or dy/dt given t, y1, and y2.
-function getSlope(aT, aA1, aA2) {
-  return 3.0 * a(aA1, aA2) * aT * aT + 2.0 * b(aA1, aA2) * aT + c(aA1);
-}
-
-function binarySubdivide(aX, aA, aB, mX1, mX2) {
-  let currentX;
-  let currentT;
-  let i = 0;
-  do {
-    currentT = aA + (aB - aA) / 2.0;
-    currentX = calcBezier(currentT, mX1, mX2) - aX;
-    if (currentX > 0.0) {
-      aB = currentT;
-    } else {
-      aA = currentT;
-    }
-  } while (Math.abs(currentX) > SUBDIVISION_PRECISION && ++i < SUBDIVISION_MAX_ITERATIONS);
-  return currentT;
-}
-
-const bezierEasing = (mX1, mY1, mX2, mY2) => {
-  if (mX1 < 0 || mX1 > 1 || mX2 < 0 || mX2 > 1) {
-    throw new Error(`BezierEasing x values must be in [0, 1] range.`);
+function easeInExpo(x) {
+  if (x === 0) {
+    return 0;
+  } else {
+    return Math.pow(2, 10 * x - 10);
   }
+}
 
-  const mSampleValues = float32ArraySupported ? new Float32Array(kSplineTableSize) : new Array(kSplineTableSize);
 
-  function newtonRaphsonIterate(aX, aGuessT) {
-    for (let i = 0; i < NEWTON_ITERATIONS; ++i) {
-      const currentSlope = getSlope(aGuessT, mX1, mX2);
-      if (currentSlope === 0.0) {
-        return aGuessT;
-      }
-      const currentX = calcBezier(aGuessT, mX1, mX2) - aX;
-      aGuessT -= currentX / currentSlope;
-    }
-    return aGuessT;
+function easeOutExpo(x) {
+  if (x === 1) {
+    return 1;
+  } else {
+    return 1 - Math.pow(2, -10 * x);
   }
+}
 
-  function calcSampleValues() {
-    for (let i = 0; i < kSplineTableSize; ++i) {
-      mSampleValues[i] = calcBezier(i * kSampleStepSize, mX1, mX2);
-    }
+
+function easeInElastic(x) {
+  const c4 = (2 * Math.PI) / 3;
+
+  if (x === 0) {
+    return 0;
+  } else if (x === 1) {
+    return 1;
+  } else {
+    return Math.pow(2, 10 * x - 10) * Math.sin((x * 10 - 10.75) * c4);
   }
+}
 
-  function getTForX(aX) {
-    let intervalStart = 0.0;
-    let currentSample = 1;
-    const lastSample = kSplineTableSize - 1;
 
-    for (; currentSample !== lastSample && mSampleValues[currentSample] <= aX; ++currentSample) {
-      intervalStart += kSampleStepSize;
-    }
-    --currentSample;
+function easeOutElastic(x) {
+  const c4 = (2 * Math.PI) / 3;
 
-    // Interpolate to provide an initial guess for t
-    const dist = (aX - mSampleValues[currentSample]) / (mSampleValues[currentSample + 1] - mSampleValues[currentSample]);
-    const guessForT = intervalStart + dist * kSampleStepSize;
-
-    const initialSlope = getSlope(guessForT, mX1, mX2);
-    if (initialSlope >= NEWTON_MIN_SLOPE) {
-      return newtonRaphsonIterate(aX, guessForT);
-    } else if (initialSlope === 0.0) {
-      return guessForT;
-    } else {
-      return binarySubdivide(aX, intervalStart, intervalStart + kSampleStepSize);
-    }
+  if (x === 0) {
+    return 0;
+  } else if (x === 1) {
+    return 1;
+  } else {
+    return Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
   }
-
-  let _precomputed = false;
-
-  function precompute() {
-    _precomputed = true;
-    if (mX1 !== mY1 || mX2 !== mY2) {
-      calcSampleValues();
-    }
-  }
-
-  const f = function (aX) {
-    if (!_precomputed) {
-      precompute();
-    }
-    if (mX1 === mY1 && mX2 === mY2) {
-      return aX;
-    } // linear
-    // Because JavaScript number are imprecise, we should guarantee the extremes are right.
-    if (aX === 0) {
-      return 0;
-    }
-    if (aX === 1) {
-      return 1;
-    }
-    return calcBezier(getTForX(aX), mY1, mY2);
-  };
-
-  f.getControlPoints = function () {
-    return [{x: mX1, y: mY1}, {x: mX2, y: mY2}];
-  };
-
-  const args = [mX1, mY1, mX2, mY2];
-  const str = `BezierEasing(` + args + `)`;
-  f.toString = function () {
-    return str;
-  };
-
-  const css = `cubic-bezier(` + args + `)`;
-  f.toCSS = function () {
-    return css;
-  };
-
-  return f;
-};
-//
-// // CSS mapping
-// BezierEasing.css = {
-//   `ease`: BezierEasing(0.25, 0.1, 0.25, 1.0),
-//   `linear`: BezierEasing(0.00, 0.0, 1.00, 1.0),
-//   `ease-in`: BezierEasing(0.42, 0.0, 1.00, 1.0),
-//   `ease-out`: BezierEasing(0.00, 0.0, 0.58, 1.0),
-//   `ease-in-out`: BezierEasing(0.42, 0.0, 0.58, 1.0)
-// };
+}
 
 
+const _ = Object.freeze({
+  easeLinear,
+  easeInCubic,
+  easeOutCubic,
+  easeInExpo,
+  easeOutExpo,
+  easeInElastic,
+  easeOutElastic
+});
 
 
-/***/ }),
-
-/***/ "./source/js/helpers/promise.js":
-/*!**************************************!*\
-  !*** ./source/js/helpers/promise.js ***!
-  \**************************************/
-/*! exports provided: runSerial, runSerialLoop */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "runSerial", function() { return runSerial; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "runSerialLoop", function() { return runSerialLoop; });
-// run promises in sequence one after another
-const runSerial = (tasks) => {
-  let result = Promise.resolve();
-  tasks.forEach((task) => {
-    result = result.then(task);
-  });
-  return result;
-};
-
-// run promises in sequence one after another
-// then check if it's necessery to proceed if there is any checking function
-// otherwise proceed anyway
-const runSerialLoop = (tasks, needProceedFunc) => {
-  return new Promise((resolve) => {
-    runSerial(tasks).then(() => {
-      if (typeof needProceedFunc !== `function` || needProceedFunc()) {
-        runSerialLoop(tasks, needProceedFunc);
-        return;
-      }
-      resolve();
-    });
-  });
-};
-
-
+/* harmony default export */ __webpack_exports__["default"] = (_);
 
 
 /***/ }),
@@ -10796,6 +10738,9 @@ class FullPageScroll {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _walrus_canvas_animation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./walrus-canvas-animation.js */ "./source/js/modules/walrus-canvas-animation.js");
+
+
 /* harmony default export */ __webpack_exports__["default"] = (() => {
   const winLetters = document.querySelectorAll(`.win-heading path`);
   const loseLetters = document.querySelectorAll(`.lose-heading path`);
@@ -10820,6 +10765,8 @@ __webpack_require__.r(__webpack_exports__);
         document.querySelectorAll(`.win-heading animate`).forEach((animate) => {
           animate.beginElement();
         });
+        const animationWalrus = new _walrus_canvas_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]();
+        animationWalrus.start();
       } else if (button.dataset.target === `result3`) {
         document.querySelectorAll(`.lose-heading animate`).forEach((animate) => {
           animate.beginElement();
@@ -10974,6 +10921,259 @@ __webpack_require__.r(__webpack_exports__);
     linkRules.classList.add(`rules__link--active`);
   });
 });
+
+
+/***/ }),
+
+/***/ "./source/js/modules/scene-2d.js":
+/*!***************************************!*\
+  !*** ./source/js/modules/scene-2d.js ***!
+  \***************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return Scene2D; });
+class Scene2D {
+  constructor(options) {
+    this.canvas = options.canvas;
+    this.ctx = this.canvas.getContext(`2d`);
+    this.size = 100;
+    this.images = {};
+    this.objects = {};
+    this.objectsSettings = options.objects;
+    this.locals = {};
+    this.isLoaded = false;
+    this.isWaitingForImages = false;
+    this.isStarted = false;
+    this.animations = [];
+    this.afterInit = () => {};
+
+    this.initObjects();
+
+    this.initEventListeners();
+    this.updateSize();
+    this.loadImages(options.imagesUrls);
+  }
+
+
+  initEventListeners() {
+    window.addEventListener(`resize`, this.updateSize.bind(this));
+  }
+
+
+  initObjects() {
+    for (const name in this.objectsSettings) {
+      if (Object.prototype.hasOwnProperty.call(this.objectsSettings, name)) {
+        const o = this.objectsSettings[name];
+
+        this.objects[name] = {};
+        this.objects[name].imageId = o.imageId;
+        this.objects[name].before = o.before;
+        this.objects[name].after = o.after;
+        this.objects[name].x = o.x;
+        this.objects[name].y = o.y;
+        this.objects[name].size = o.size;
+        this.objects[name].opacity = o.opacity;
+
+        this.objects[name].transforms = {};
+        this.objects[name].transforms.rotate = o.transforms.rotate;
+        this.objects[name].transforms.translateX = o.transforms.translateX;
+        this.objects[name].transforms.translateY = o.transforms.translateY;
+        this.objects[name].transforms.scaleX = o.transforms.scaleX;
+        this.objects[name].transforms.scaleY = o.transforms.scaleY;
+      }
+    }
+
+    if (this.afterInit && typeof this.afterInit === `function`) {
+      this.afterInit();
+    }
+  }
+
+
+  loadImages(imagesUrls) {
+    let loadingCounter = 0;
+
+    for (const name in imagesUrls) {
+      if (Object.prototype.hasOwnProperty.call(imagesUrls, name)) {
+        const image = new Image();
+
+        image.addEventListener(`load`, () => {
+          loadingCounter++;
+
+          if (loadingCounter === Object.keys(imagesUrls).length) {
+            this.isLoaded = true;
+
+            if (this.isWaitingForImages) {
+              this.start();
+            } else {
+              this.drawScene();
+            }
+          }
+        });
+
+        this.images[name] = image;
+
+        image.src = imagesUrls[name];
+      }
+    }
+  }
+
+
+  start() {
+    if (!this.isLoaded) {
+      this.isWaitingForImages = true;
+
+      return;
+    }
+
+    if (this.isStarted) {
+      this.stop();
+      this.initObjects();
+    }
+
+    if (this.animations.length === 0) {
+      this.initAnimations();
+    }
+
+    this.animations.forEach((animation) => {
+      animation.start();
+    });
+
+    this.isStarted = true;
+  }
+
+
+  stop() {
+    this.animations.forEach((animation) => {
+      animation.stop();
+    });
+  }
+
+
+  drawImage(image, object) {
+    let x = object.x;
+    let y = object.y;
+    let size = object.size;
+    let opacity = object.opacity;
+    let transforms = object.transforms;
+
+    if (opacity === 0) {
+      return;
+    }
+
+    if (transforms && (transforms.scaleX === 0 || transforms.scaleY === 0)) {
+      return;
+    }
+
+    let width = this.size * (size / 100);
+    let height = this.size * (size / 100) * image.height / image.width;
+
+    x = this.size * (x / 100) - width / 2;
+    y = this.size * (y / 100) - height / 2;
+
+    const isContextTransforming = opacity
+      || (transforms && (transforms.rotate || transforms.scaleX || transforms.scaleY));
+
+    if (isContextTransforming) {
+      this.ctx.save();
+    }
+
+    if (transforms) {
+      if (transforms.translateX) {
+        x += this.size * (transforms.translateX / 100);
+      }
+
+      if (transforms.translateY) {
+        y += this.size * (transforms.translateY / 100);
+      }
+
+      if (transforms.rotate) {
+        this.ctx.translate(x + width / 2, y + height / 2);
+        this.ctx.rotate(transforms.rotate * Math.PI / 180);
+      }
+
+      if (transforms.scaleX) {
+        width *= transforms.scaleX;
+
+        if (transforms.scaleX < 0) {
+          this.ctx.scale(-1, 1);
+
+          x = -x;
+        }
+      }
+
+      if (transforms.scaleY) {
+        height *= transforms.scaleY;
+
+        if (transforms.scaleY < 0) {
+          this.ctx.scale(1, -1);
+
+          y = -y;
+        }
+      }
+
+      if (transforms.rotate) {
+        this.ctx.translate(-x - width / 2, -y - height / 2);
+      }
+
+    }
+
+    if (opacity) {
+      this.ctx.globalAlpha = opacity;
+    }
+
+    this.ctx.drawImage(
+        image,
+        x,
+        y,
+        width,
+        height
+    );
+
+    if (isContextTransforming) {
+      this.ctx.restore();
+    }
+  }
+
+
+  clearScene() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+
+  drawScene() {
+    this.clearScene();
+
+    for (const name in this.objects) {
+      if (Object.prototype.hasOwnProperty.call(this.objects, name)) {
+        const object = this.objects[name];
+
+        if (object.before && typeof object.before === `function`) {
+          object.before();
+        }
+
+        this.drawImage(
+            this.images[object.imageId],
+            object
+        );
+
+        if (object.after && typeof object.after === `function`) {
+          object.after();
+        }
+      }
+    }
+  }
+
+
+  updateSize() {
+    this.size = Math.min(window.innerWidth, window.innerHeight);
+
+    this.canvas.height = this.size;
+    this.canvas.width = this.size;
+  }
+}
 
 
 /***/ }),
@@ -11179,262 +11379,336 @@ __webpack_require__.r(__webpack_exports__);
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return WalrusScene; });
-/* harmony import */ var _helpers_cubic_bezier__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../helpers/cubic-bezier */ "./source/js/helpers/cubic-bezier.js");
-/* harmony import */ var _helpers_animate__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../helpers/animate */ "./source/js/helpers/animate.js");
-/* harmony import */ var _helpers_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../helpers/promise */ "./source/js/helpers/promise.js");
+/* harmony import */ var _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../helpers/animation.js */ "./source/js/helpers/animation.js");
+/* harmony import */ var _scene_2d_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./scene-2d.js */ "./source/js/modules/scene-2d.js");
+/* harmony import */ var _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../helpers/utils.js */ "./source/js/helpers/utils.js");
 
 
 
 
-let windowWidth = window.innerWidth;
-let windowHeight = window.innerHeight;
+const IMAGES_URLS = Object.freeze({
+  plane: `./img/airplane.png`,
+  tree: `./img/tree.png`,
+  tree2: `./img/tree-2.png`,
+  ice: `./img/ice.png`,
+  seaCalf: `./img/sea-calf-2.png`,
+  snowflake: `./img/snowflake.png`
+});
 
-class WalrusScene {
-  constructor(options) {
-    this.canvas = document.querySelector(options.canvas);
-    this.ctx = this.canvas.getContext(`2d`);
 
-    this.walrusImg = new Image();
-    this.iceImg = new Image();
-    this.airplaneImg = new Image();
-    this.snowflakeOneImg = new Image();
-    this.snowflakeTwoImg = new Image();
-    this.treeOneImg = new Image();
-    this.treeTwoImg = new Image();
+const OBJECTS = Object.freeze({
+  plane: {
+    imageId: `plane`,
+    x: 90,
+    y: 50,
+    size: 10,
+    opacity: 0,
+    transforms: {
+      translateY: -10
+    }
+  },
+  tree: {
+    imageId: `tree`,
+    x: 65,
+    y: 62,
+    size: 5,
+    opacity: 0,
+    transforms: {
+      translateY: 30
+    }
+  },
+  tree2: {
+    imageId: `tree2`,
+    x: 60,
+    y: 60,
+    size: 5,
+    opacity: 0,
+    transforms: {
+      translateY: 30
+    }
+  },
+  ice: {
+    imageId: `ice`,
+    x: 50,
+    y: 70,
+    size: 50,
+    opacity: 0,
+    transforms: {
+      translateY: 30
+    }
+  },
+  seaCalf: {
+    imageId: `seaCalf`,
+    x: 50,
+    y: 60,
+    size: 50,
+    opacity: 0,
+    transforms: {
+      translateY: 30
+    }
+  },
+  snowflake: {
+    imageId: `snowflake`,
+    x: 25,
+    y: 55,
+    size: 30,
+    opacity: 0,
+    transforms: {
+      rotate: -30
+    }
+  },
+  snowflake2: {
+    imageId: `snowflake`,
+    x: 75,
+    y: 65,
+    size: 15,
+    opacity: 0,
+    transforms: {
+      rotate: 30,
+      scaleX: -1
+    }
+  },
+});
 
-    this.loadingCounter = 0;
 
-    this.isAnimated = false;
+const LOCALS = Object.freeze({
+  blob: {
+    centerX: 45,
+    centerY: 55,
+    radius: 15,
+    endX: 87,
+    endY: 53,
+    angle: 45,
+    deltasLength: 10,
+    opacity: 0
+  }
+});
 
-    this.startAnimations = [];
 
-    this.walrusWidth = 500;
-    this.walrusHeight = 500;
-    this.walrusL = (windowWidth - this.walrusWidth) / 2;
-    this.walrusT = (windowHeight - this.walrusHeight) / 2;
+class WalrusScene extends _scene_2d_js__WEBPACK_IMPORTED_MODULE_1__["default"] {
+  constructor() {
+    const canvas = document.getElementById(`walrus-canvas`);
 
-    this.iceWidth = 408;
-    this.iceHeight = 167;
-    this.iceL = (windowWidth - this.iceWidth) / 2;
-    this.iceT = (windowHeight - this.iceHeight) / 2 + 90;
+    super({
+      canvas,
+      objects: OBJECTS,
+      locals: LOCALS,
+      imagesUrls: IMAGES_URLS,
+    });
 
-    this.airplaneWidth = 150;
-    this.airplaneHeight = 150;
-    this.airplaneL = (windowWidth - this.airplaneWidth) / 2;
-    this.airplaneT = (windowHeight - this.airplaneHeight) / 2;
-    this.airplaneAngle = 90;
-
-    this.snowflakeOneWidth = 300;
-    this.snowflakeOneHeight = 300;
-    this.snowflakeOneL = (windowWidth - this.snowflakeOneWidth) / 2;
-    this.snowflakeOneT = (windowHeight - this.snowflakeOneHeight) / 2;
-
-    this.snowflakeTwoWidth = 200;
-    this.snowflakeTwoHeight = 200;
-    this.snowflakeTwoL = (windowWidth - this.snowflakeOneWidth) / 2;
-    this.snowflakeTwoT = (windowHeight - this.snowflakeOneHeight) / 2;
-
-    this.snowflakesOpacity = 0;
-
-    this.sceneX = 0;
-    this.sceneY = 0;
-    this.sceneAngle = 0;
+    this.afterInit = () => {
+      this.objects.plane.before = this.drawBlob.bind(this);
+    };
 
     this.initEventListeners();
-    this.updateSceneSizing();
-    this.loadImages();
+    this.initObjects(OBJECTS);
+    this.initLocals();
+    this.updateSize();
   }
 
-  increaseLoadingCounter() {
-    this.loadingCounter++;
 
-    if (this.loadingCounter === 7) {
-      this.drawScene();
+  initLocals() {
+    this.locals = {
+      blob: {
+        centerX: LOCALS.blob.centerX,
+        centerY: LOCALS.blob.centerY,
+        radius: LOCALS.blob.radius,
+        endX: LOCALS.blob.endX,
+        endY: LOCALS.blob.endY,
+        angle: LOCALS.blob.angle,
+        deltasLength: LOCALS.blob.deltasLength,
+        opacity: LOCALS.blob.opacity
+      }
+    };
+  }
+
+
+  initAnimations() {
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: () => {
+        this.drawScene();
+      },
+      duration: `infinite`,
+      fps: 60
+    }));
+
+    this.initPlaneAnimations();
+    this.initBlobAnimations();
+    this.initTreesAnimations();
+    this.initSeaCalfAnimations();
+    this.initSnowflakesAnimations();
+  }
+
+
+  initPlaneAnimations() {
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress) => {
+        const progressReversed = 1 - progress;
+
+        this.objects.plane.transforms.translateX = -40 * progressReversed;
+        this.objects.plane.transforms.translateY =
+          5 * Math.sin(Math.PI * progressReversed) - 15 * progressReversed;
+        this.objects.plane.transforms.rotate =
+          45 * Math.sin(Math.PI * progressReversed) + 45 * progressReversed;
+        this.objects.plane.opacity = progress;
+      },
+      duration: 500,
+      delay: 1200,
+      easing: _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__["default"].easeInQuad
+    }));
+  }
+
+
+  initBlobAnimations() {
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress) => {
+        const progressReversed = 1 - progress;
+
+        this.locals.blob.radius = 15 * progress;
+        this.locals.blob.centerY = 55 - 15 * progressReversed;
+        this.locals.blob.endX = 87 - 35 * progressReversed;
+        this.locals.blob.endY = 53 - 12 * progressReversed;
+        this.locals.blob.angle = 40 + 120 * progressReversed;
+        this.locals.blob.deltasLength = 10 * progress;
+        this.locals.blob.opacity = progress;
+      },
+      duration: 500,
+      delay: 1200,
+      easing: _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__["default"].easeInQuad
+    }));
+  }
+
+
+  initTreesAnimations() {
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress) => {
+        this.objects.tree.transforms.translateY = 30 * (1 - progress);
+        this.objects.tree.opacity = progress;
+      },
+      duration: 500,
+      delay: 1200,
+      easing: _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__["default"].easeInQuad
+    }));
+
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress) => {
+        this.objects.tree2.transforms.translateY = 30 * (1 - progress);
+        this.objects.tree2.opacity = progress;
+      },
+      duration: 500,
+      delay: 1500,
+      easing: _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__["default"].easeInQuad
+    }));
+  }
+
+
+  initSeaCalfAnimations() {
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress) => {
+        const progressReversed = 1 - progress;
+
+        this.objects.seaCalf.transforms.translateY = 30 * progressReversed;
+        this.objects.seaCalf.transforms.rotate = -30 * Math.sin(progressReversed * 2);
+
+        this.objects.ice.transforms.translateY = 30 * progressReversed;
+        this.objects.ice.transforms.rotate = -30 * Math.sin(progressReversed * 2);
+      },
+      duration: 2000,
+      delay: 1000,
+      easing: _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__["default"].easeOutElastic
+    }));
+
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress) => {
+        this.objects.seaCalf.opacity = progress;
+        this.objects.ice.opacity = progress;
+      },
+      duration: 100,
+      delay: 1000,
+      easing: _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__["default"].easeInQuad
+    }));
+  }
+
+
+  initSnowflakesAnimations() {
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress, details) => {
+        this.objects.snowflake.transforms.translateY =
+          2 * Math.sin(1.5 * (details.currentTime - details.startTime) / 1000);
+      },
+      duration: `infinite`
+    }));
+
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress, details) => {
+        this.objects.snowflake2.transforms.translateY =
+          2 * Math.sin(1.5 * (details.currentTime - details.startTime) / 1000);
+      },
+      duration: `infinite`,
+      delay: 800
+    }));
+
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress) => {
+        this.objects.snowflake.opacity = progress;
+      },
+      duration: 500,
+      delay: 1500,
+      easing: _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__["default"].easeInQuad
+    }));
+
+    this.animations.push(new _helpers_animation_js__WEBPACK_IMPORTED_MODULE_0__["default"]({
+      func: (progress) => {
+        this.objects.snowflake2.opacity = progress;
+      },
+      duration: 500,
+      delay: 1900,
+      easing: _helpers_utils_js__WEBPACK_IMPORTED_MODULE_2__["default"].easeInQuad
+    }));
+  }
+
+
+  drawBlob() {
+    const b = this.locals.blob;
+    const angle = b.angle * Math.PI / 180;
+
+    if (b.opacity === 0) {
+      return;
     }
-  }
 
-
-  initEventListeners() {
-    this.walrusImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.iceImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.airplaneImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.snowflakeOneImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.snowflakeTwoImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.treeOneImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.treeTwoImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-  }
-
-
-  loadImages() {
-    this.walrusImg.src = `/img/sea-calf-2.png`;
-    this.iceImg.src = `/img/ice.png`;
-    this.airplaneImg.src = `/img/airplane.png`;
-    this.snowflakeOneImg.src = `/img/snowflake.png`;
-    this.snowflakeTwoImg.src = `/img/snowflake.png`;
-    this.treeOneImg.src = `/img/tree.png`;
-    this.treeTwoImg.src = `/img/tree-2.png`;
-  }
-
-
-  updateSceneSizing() {
-    windowWidth = window.innerWidth;
-    windowHeight = window.innerHeight;
-  }
-
-
-  rotateCtx(angle, cx, cy) {
-    this.ctx.translate(cx, cy);
-    this.ctx.rotate(angle * Math.PI / 180);
-    this.ctx.translate(-cx, -cy);
-  }
-
-  skewCtx(x, y) {
-    this.ctx.transform(1, x, y, 1, 0, 0);
-  }
-
-
-  drawWalrus() {
-    this.ctx.globalAlpha = 1;
-    this.ctx.translate(this.sceneX, this.sceneY);
-    this.rotateCtx(this.sceneAngle, windowWidth / 2, windowHeight / 2);
-    this.ctx.drawImage(this.iceImg, this.iceL, this.iceT, this.iceWidth, this.iceHeight);
+    const s = this.size / 100;
 
     this.ctx.save();
-    this.ctx.drawImage(this.walrusImg, this.walrusL, this.walrusT, this.walrusWidth, this.walrusHeight);
+    this.ctx.globalAlpha = b.opacity;
+    this.ctx.fillStyle = `#acc3ff`;
+
+    this.ctx.beginPath();
+    this.ctx.arc(
+        b.centerX * s,
+        b.centerY * s,
+        b.radius * s,
+        Math.PI / 2,
+        Math.PI * 3 / 2
+    );
+    this.ctx.bezierCurveTo(
+        (b.centerX + 10) * s,
+        (b.centerY - b.radius) * s,
+        (b.endX - b.deltasLength * Math.sin(angle)) * s,
+        (b.endY + b.deltasLength * Math.cos(angle)) * s,
+        b.endX * s,
+        b.endY * s
+    );
+    this.ctx.bezierCurveTo(
+        (b.endX - b.deltasLength * Math.sin(angle)) * s,
+        (b.endY + b.deltasLength * Math.cos(angle)) * s,
+        (b.centerX + 10) * s,
+        (b.centerY + b.radius) * s,
+        b.centerX * s,
+        (b.centerY + b.radius) * s
+    );
+
+    this.ctx.fill();
     this.ctx.restore();
-  }
-
-
-  drawSnowflake() {
-    this.ctx.save();
-
-    this.ctx.translate(this.snowflakeOneL, this.snowflakeOneT);
-    this.ctx.drawImage(this.snowflakeOneImg, -250, 0, this.snowflakeOneWidth, this.snowflakeOneHeight);
-
-    this.ctx.translate(this.snowflakeTwoL, this.snowflakeTwoT);
-    this.ctx.scale(-1, 1);
-    this.ctx.drawImage(this.snowflakeTwoImg, 100, 0, this.snowflakeTwoWidth, this.snowflakeTwoHeight);
-
-    this.ctx.restore();
-  }
-
-
-  drawScene() {
-    this.canvas.width = windowWidth;
-    this.canvas.height = windowHeight;
-
-    this.ctx.clearRect(0, 0, windowWidth, windowHeight);
-
-    if (this.isAnimated) {
-      this.ctx.globalAlpha = this.snowflakesOpacity;
-
-      this.drawSnowflake();
-      this.drawWalrus();
-    }
-  }
-
-
-  animateSnowflake() {
-    const snowflakeOpacityTick = (progress) => {
-      this.snowflakesOpacity = progress;
-    };
-
-    Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateEasing"])(snowflakeOpacityTick, 500, Object(_helpers_cubic_bezier__WEBPACK_IMPORTED_MODULE_0__["bezierEasing"])(0, 0, 1, 1));
-  }
-
-
-  animateWalrusFluctuations() {
-    const walrusYAnimationTick = (from, to) => (progress) => {
-      this.sceneY = from + progress * (to - from);
-    };
-
-    const symmetricalEase = Object(_helpers_cubic_bezier__WEBPACK_IMPORTED_MODULE_0__["bezierEasing"])(0.33, 0, 0.67, 1);
-
-    const walrusYFrom = 85;
-    const walrusYTo = 100;
-    const walrusYAnimations = [
-      () => Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateEasing"])(walrusYAnimationTick(1000, 85), 1500, symmetricalEase),
-      () => Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateEasing"])(walrusYAnimationTick(walrusYFrom, walrusYTo), 500, symmetricalEase),
-      () => Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateEasing"])(walrusYAnimationTick(walrusYTo, walrusYFrom), 500, symmetricalEase)
-    ];
-
-    Object(_helpers_promise__WEBPACK_IMPORTED_MODULE_2__["runSerial"])(walrusYAnimations);
-
-    const walrusAngleAnimationTick = (from, to) => (progress) => {
-      this.sceneAngle = from + progress * (to - from);
-    };
-
-    const walrusAngleStart = 0;
-    const walrusAngleFrom = 10;
-    const walrusAngleTo = -5;
-    const walrusAngleAnimations = [
-      () => Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateEasing"])(walrusAngleAnimationTick(walrusAngleFrom, walrusAngleTo), 500, symmetricalEase),
-      () => Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateEasing"])(walrusAngleAnimationTick(walrusAngleTo, walrusAngleStart), 500, symmetricalEase)
-    ];
-
-    Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateEasing"])(walrusAngleAnimationTick(walrusAngleStart, walrusAngleFrom), 3000, symmetricalEase)
-      .then(() => {
-        Object(_helpers_promise__WEBPACK_IMPORTED_MODULE_2__["runSerial"])(walrusAngleAnimations);
-      });
-  }
-
-  startAnimationInfinite() {
-    const globalAnimationTick = () => {
-      this.drawScene();
-    };
-
-    const animations = [
-      () => Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateDuration"])(globalAnimationTick, 6000)
-    ];
-
-    Object(_helpers_promise__WEBPACK_IMPORTED_MODULE_2__["runSerial"])(animations).then(this.startAnimationInfinite.bind(this));
-  }
-
-
-  startAnimation() {
-    if (!this.isAnimated) {
-      this.isAnimated = true;
-
-      const globalAnimationTick = (globalProgress) => {
-        const showWalrusAnimationDelay = 0;
-        const snowflakeAnimationDelay = 1500;
-
-        if (globalProgress >= showWalrusAnimationDelay && this.startAnimations.indexOf(showWalrusAnimationDelay) < 0) {
-          this.startAnimations.push(showWalrusAnimationDelay);
-
-          this.animateWalrusFluctuations();
-          this.startAnimationInfinite();
-        }
-
-        if (globalProgress >= snowflakeAnimationDelay && this.startAnimations.indexOf(snowflakeAnimationDelay) < 0) {
-          this.startAnimations.push(snowflakeAnimationDelay);
-
-          this.animateSnowflake();
-        }
-      };
-
-      Object(_helpers_animate__WEBPACK_IMPORTED_MODULE_1__["animateDuration"])(globalAnimationTick, 6000);
-    }
   }
 }
 
@@ -11463,9 +11737,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _modules_rules_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./modules/rules.js */ "./source/js/modules/rules.js");
 /* harmony import */ var _modules_title_animation_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./modules/title-animation.js */ "./source/js/modules/title-animation.js");
 /* harmony import */ var _modules_heading_animation_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./modules/heading-animation.js */ "./source/js/modules/heading-animation.js");
-/* harmony import */ var _modules_walrus_canvas_animation_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./modules/walrus-canvas-animation.js */ "./source/js/modules/walrus-canvas-animation.js");
 // modules
-
 
 
 
@@ -11496,12 +11768,6 @@ Object(_modules_heading_animation_js__WEBPACK_IMPORTED_MODULE_12__["default"])()
 
 const fullPageScroll = new _modules_full_page_scroll__WEBPACK_IMPORTED_MODULE_8__["default"]();
 fullPageScroll.init();
-
-const animationWalrus = new _modules_walrus_canvas_animation_js__WEBPACK_IMPORTED_MODULE_13__["default"]({
-  canvas: `#walrus-canvas`
-});
-
-animationWalrus.startAnimation();
 
 
 /***/ }),
