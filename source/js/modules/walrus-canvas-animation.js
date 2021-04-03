@@ -1,255 +1,329 @@
-import {bezierEasing} from '../helpers/cubic-bezier';
-import {animateDuration, animateEasing} from '../helpers/animate';
-import {runSerial} from '../helpers/promise';
+import Animation from '../helpers/animation.js';
+import Scene2D from './scene-2d.js';
+import _ from '../helpers/utils.js';
 
-let windowWidth = window.innerWidth;
-let windowHeight = window.innerHeight;
+const IMAGES_URLS = Object.freeze({
+  plane: `./img/airplane.png`,
+  tree: `./img/tree.png`,
+  tree2: `./img/tree-2.png`,
+  ice: `./img/ice.png`,
+  seaCalf: `./img/sea-calf-2.png`,
+  snowflake: `./img/snowflake.png`
+});
 
-export default class WalrusScene {
-  constructor(options) {
-    this.canvas = document.querySelector(options.canvas);
-    this.ctx = this.canvas.getContext(`2d`);
 
-    this.walrusImg = new Image();
-    this.iceImg = new Image();
-    this.airplaneImg = new Image();
-    this.snowflakeOneImg = new Image();
-    this.snowflakeTwoImg = new Image();
-    this.treeOneImg = new Image();
-    this.treeTwoImg = new Image();
+const OBJECTS = Object.freeze({
+  plane: {
+    imageId: `plane`,
+    x: 90,
+    y: 50,
+    size: 10,
+    opacity: 0,
+    transforms: {
+      translateY: -10
+    }
+  },
+  tree: {
+    imageId: `tree`,
+    x: 65,
+    y: 62,
+    size: 5,
+    opacity: 0,
+    transforms: {
+      translateY: 30
+    }
+  },
+  tree2: {
+    imageId: `tree2`,
+    x: 60,
+    y: 60,
+    size: 5,
+    opacity: 0,
+    transforms: {
+      translateY: 30
+    }
+  },
+  ice: {
+    imageId: `ice`,
+    x: 50,
+    y: 70,
+    size: 50,
+    opacity: 0,
+    transforms: {
+      translateY: 30
+    }
+  },
+  seaCalf: {
+    imageId: `seaCalf`,
+    x: 50,
+    y: 60,
+    size: 50,
+    opacity: 0,
+    transforms: {
+      translateY: 30
+    }
+  },
+  snowflake: {
+    imageId: `snowflake`,
+    x: 25,
+    y: 55,
+    size: 30,
+    opacity: 0,
+    transforms: {
+      rotate: -30
+    }
+  },
+  snowflake2: {
+    imageId: `snowflake`,
+    x: 75,
+    y: 65,
+    size: 15,
+    opacity: 0,
+    transforms: {
+      rotate: 30,
+      scaleX: -1
+    }
+  },
+});
 
-    this.loadingCounter = 0;
 
-    this.isAnimated = false;
+const LOCALS = Object.freeze({
+  blob: {
+    centerX: 45,
+    centerY: 55,
+    radius: 15,
+    endX: 87,
+    endY: 53,
+    angle: 45,
+    deltasLength: 10,
+    opacity: 0
+  }
+});
 
-    this.startAnimations = [];
 
-    this.walrusWidth = 500;
-    this.walrusHeight = 500;
-    this.walrusL = (windowWidth - this.walrusWidth) / 2;
-    this.walrusT = (windowHeight - this.walrusHeight) / 2;
+export default class WalrusScene extends Scene2D {
+  constructor() {
+    const canvas = document.getElementById(`walrus-canvas`);
 
-    this.iceWidth = 408;
-    this.iceHeight = 167;
-    this.iceL = (windowWidth - this.iceWidth) / 2;
-    this.iceT = (windowHeight - this.iceHeight) / 2 + 90;
+    super({
+      canvas,
+      objects: OBJECTS,
+      locals: LOCALS,
+      imagesUrls: IMAGES_URLS,
+    });
 
-    this.airplaneWidth = 150;
-    this.airplaneHeight = 150;
-    this.airplaneL = (windowWidth - this.airplaneWidth) / 2;
-    this.airplaneT = (windowHeight - this.airplaneHeight) / 2;
-    this.airplaneAngle = 90;
-
-    this.snowflakeOneWidth = 300;
-    this.snowflakeOneHeight = 300;
-    this.snowflakeOneL = (windowWidth - this.snowflakeOneWidth) / 2;
-    this.snowflakeOneT = (windowHeight - this.snowflakeOneHeight) / 2;
-
-    this.snowflakeTwoWidth = 200;
-    this.snowflakeTwoHeight = 200;
-    this.snowflakeTwoL = (windowWidth - this.snowflakeOneWidth) / 2;
-    this.snowflakeTwoT = (windowHeight - this.snowflakeOneHeight) / 2;
-
-    this.snowflakesOpacity = 0;
-
-    this.sceneX = 0;
-    this.sceneY = 0;
-    this.sceneAngle = 0;
+    this.afterInit = () => {
+      this.objects.plane.before = this.drawBlob.bind(this);
+    };
 
     this.initEventListeners();
-    this.updateSceneSizing();
-    this.loadImages();
+    this.initObjects(OBJECTS);
+    this.initLocals();
+    this.updateSize();
   }
 
-  increaseLoadingCounter() {
-    this.loadingCounter++;
 
-    if (this.loadingCounter === 7) {
-      this.drawScene();
+  initLocals() {
+    this.locals = {
+      blob: {
+        centerX: LOCALS.blob.centerX,
+        centerY: LOCALS.blob.centerY,
+        radius: LOCALS.blob.radius,
+        endX: LOCALS.blob.endX,
+        endY: LOCALS.blob.endY,
+        angle: LOCALS.blob.angle,
+        deltasLength: LOCALS.blob.deltasLength,
+        opacity: LOCALS.blob.opacity
+      }
+    };
+  }
+
+
+  initAnimations() {
+    this.animations.push(new Animation({
+      func: () => {
+        this.drawScene();
+      },
+      duration: `infinite`,
+      fps: 60
+    }));
+
+    this.initPlaneAnimations();
+    this.initBlobAnimations();
+    this.initTreesAnimations();
+    this.initSeaCalfAnimations();
+    this.initSnowflakesAnimations();
+  }
+
+
+  initPlaneAnimations() {
+    this.animations.push(new Animation({
+      func: (progress) => {
+        const progressReversed = 1 - progress;
+
+        this.objects.plane.transforms.translateX = -40 * progressReversed;
+        this.objects.plane.transforms.translateY =
+          5 * Math.sin(Math.PI * progressReversed) - 15 * progressReversed;
+        this.objects.plane.transforms.rotate =
+          45 * Math.sin(Math.PI * progressReversed) + 45 * progressReversed;
+        this.objects.plane.opacity = progress;
+      },
+      duration: 500,
+      delay: 1200,
+      easing: _.easeInQuad
+    }));
+  }
+
+
+  initBlobAnimations() {
+    this.animations.push(new Animation({
+      func: (progress) => {
+        const progressReversed = 1 - progress;
+
+        this.locals.blob.radius = 15 * progress;
+        this.locals.blob.centerY = 55 - 15 * progressReversed;
+        this.locals.blob.endX = 87 - 35 * progressReversed;
+        this.locals.blob.endY = 53 - 12 * progressReversed;
+        this.locals.blob.angle = 40 + 120 * progressReversed;
+        this.locals.blob.deltasLength = 10 * progress;
+        this.locals.blob.opacity = progress;
+      },
+      duration: 500,
+      delay: 1200,
+      easing: _.easeInQuad
+    }));
+  }
+
+
+  initTreesAnimations() {
+    this.animations.push(new Animation({
+      func: (progress) => {
+        this.objects.tree.transforms.translateY = 30 * (1 - progress);
+        this.objects.tree.opacity = progress;
+      },
+      duration: 500,
+      delay: 1200,
+      easing: _.easeInQuad
+    }));
+
+    this.animations.push(new Animation({
+      func: (progress) => {
+        this.objects.tree2.transforms.translateY = 30 * (1 - progress);
+        this.objects.tree2.opacity = progress;
+      },
+      duration: 500,
+      delay: 1500,
+      easing: _.easeInQuad
+    }));
+  }
+
+
+  initSeaCalfAnimations() {
+    this.animations.push(new Animation({
+      func: (progress) => {
+        const progressReversed = 1 - progress;
+
+        this.objects.seaCalf.transforms.translateY = 30 * progressReversed;
+        this.objects.seaCalf.transforms.rotate = -30 * Math.sin(progressReversed * 2);
+
+        this.objects.ice.transforms.translateY = 30 * progressReversed;
+        this.objects.ice.transforms.rotate = -30 * Math.sin(progressReversed * 2);
+      },
+      duration: 2000,
+      delay: 1000,
+      easing: _.easeOutElastic
+    }));
+
+    this.animations.push(new Animation({
+      func: (progress) => {
+        this.objects.seaCalf.opacity = progress;
+        this.objects.ice.opacity = progress;
+      },
+      duration: 100,
+      delay: 1000,
+      easing: _.easeInQuad
+    }));
+  }
+
+
+  initSnowflakesAnimations() {
+    this.animations.push(new Animation({
+      func: (progress, details) => {
+        this.objects.snowflake.transforms.translateY =
+          2 * Math.sin(1.5 * (details.currentTime - details.startTime) / 1000);
+      },
+      duration: `infinite`
+    }));
+
+    this.animations.push(new Animation({
+      func: (progress, details) => {
+        this.objects.snowflake2.transforms.translateY =
+          2 * Math.sin(1.5 * (details.currentTime - details.startTime) / 1000);
+      },
+      duration: `infinite`,
+      delay: 800
+    }));
+
+    this.animations.push(new Animation({
+      func: (progress) => {
+        this.objects.snowflake.opacity = progress;
+      },
+      duration: 500,
+      delay: 1500,
+      easing: _.easeInQuad
+    }));
+
+    this.animations.push(new Animation({
+      func: (progress) => {
+        this.objects.snowflake2.opacity = progress;
+      },
+      duration: 500,
+      delay: 1900,
+      easing: _.easeInQuad
+    }));
+  }
+
+
+  drawBlob() {
+    const b = this.locals.blob;
+    const angle = b.angle * Math.PI / 180;
+
+    if (b.opacity === 0) {
+      return;
     }
-  }
 
-
-  initEventListeners() {
-    this.walrusImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.iceImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.airplaneImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.snowflakeOneImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.snowflakeTwoImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.treeOneImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-
-    this.treeTwoImg.onload = () => {
-      this.increaseLoadingCounter();
-    };
-  }
-
-
-  loadImages() {
-    this.walrusImg.src = `/img/sea-calf-2.png`;
-    this.iceImg.src = `/img/ice.png`;
-    this.airplaneImg.src = `/img/airplane.png`;
-    this.snowflakeOneImg.src = `/img/snowflake.png`;
-    this.snowflakeTwoImg.src = `/img/snowflake.png`;
-    this.treeOneImg.src = `/img/tree.png`;
-    this.treeTwoImg.src = `/img/tree-2.png`;
-  }
-
-
-  updateSceneSizing() {
-    windowWidth = window.innerWidth;
-    windowHeight = window.innerHeight;
-  }
-
-
-  rotateCtx(angle, cx, cy) {
-    this.ctx.translate(cx, cy);
-    this.ctx.rotate(angle * Math.PI / 180);
-    this.ctx.translate(-cx, -cy);
-  }
-
-  skewCtx(x, y) {
-    this.ctx.transform(1, x, y, 1, 0, 0);
-  }
-
-
-  drawWalrus() {
-    this.ctx.globalAlpha = 1;
-    this.ctx.translate(this.sceneX, this.sceneY);
-    this.rotateCtx(this.sceneAngle, windowWidth / 2, windowHeight / 2);
-    this.ctx.drawImage(this.iceImg, this.iceL, this.iceT, this.iceWidth, this.iceHeight);
+    const s = this.size / 100;
 
     this.ctx.save();
-    this.ctx.drawImage(this.walrusImg, this.walrusL, this.walrusT, this.walrusWidth, this.walrusHeight);
+    this.ctx.globalAlpha = b.opacity;
+    this.ctx.fillStyle = `#acc3ff`;
+
+    this.ctx.beginPath();
+    this.ctx.arc(
+        b.centerX * s,
+        b.centerY * s,
+        b.radius * s,
+        Math.PI / 2,
+        Math.PI * 3 / 2
+    );
+    this.ctx.bezierCurveTo(
+        (b.centerX + 10) * s,
+        (b.centerY - b.radius) * s,
+        (b.endX - b.deltasLength * Math.sin(angle)) * s,
+        (b.endY + b.deltasLength * Math.cos(angle)) * s,
+        b.endX * s,
+        b.endY * s
+    );
+    this.ctx.bezierCurveTo(
+        (b.endX - b.deltasLength * Math.sin(angle)) * s,
+        (b.endY + b.deltasLength * Math.cos(angle)) * s,
+        (b.centerX + 10) * s,
+        (b.centerY + b.radius) * s,
+        b.centerX * s,
+        (b.centerY + b.radius) * s
+    );
+
+    this.ctx.fill();
     this.ctx.restore();
-  }
-
-
-  drawSnowflake() {
-    this.ctx.save();
-
-    this.ctx.translate(this.snowflakeOneL, this.snowflakeOneT);
-    this.ctx.drawImage(this.snowflakeOneImg, -250, 0, this.snowflakeOneWidth, this.snowflakeOneHeight);
-
-    this.ctx.translate(this.snowflakeTwoL, this.snowflakeTwoT);
-    this.ctx.scale(-1, 1);
-    this.ctx.drawImage(this.snowflakeTwoImg, 100, 0, this.snowflakeTwoWidth, this.snowflakeTwoHeight);
-
-    this.ctx.restore();
-  }
-
-
-  drawScene() {
-    this.canvas.width = windowWidth;
-    this.canvas.height = windowHeight;
-
-    this.ctx.clearRect(0, 0, windowWidth, windowHeight);
-
-    if (this.isAnimated) {
-      this.ctx.globalAlpha = this.snowflakesOpacity;
-
-      this.drawSnowflake();
-      this.drawWalrus();
-    }
-  }
-
-
-  animateSnowflake() {
-    const snowflakeOpacityTick = (progress) => {
-      this.snowflakesOpacity = progress;
-    };
-
-    animateEasing(snowflakeOpacityTick, 500, bezierEasing(0, 0, 1, 1));
-  }
-
-
-  animateWalrusFluctuations() {
-    const walrusYAnimationTick = (from, to) => (progress) => {
-      this.sceneY = from + progress * (to - from);
-    };
-
-    const symmetricalEase = bezierEasing(0.33, 0, 0.67, 1);
-
-    const walrusYFrom = 85;
-    const walrusYTo = 100;
-    const walrusYAnimations = [
-      () => animateEasing(walrusYAnimationTick(1000, 85), 1500, symmetricalEase),
-      () => animateEasing(walrusYAnimationTick(walrusYFrom, walrusYTo), 500, symmetricalEase),
-      () => animateEasing(walrusYAnimationTick(walrusYTo, walrusYFrom), 500, symmetricalEase)
-    ];
-
-    runSerial(walrusYAnimations);
-
-    const walrusAngleAnimationTick = (from, to) => (progress) => {
-      this.sceneAngle = from + progress * (to - from);
-    };
-
-    const walrusAngleStart = 0;
-    const walrusAngleFrom = 10;
-    const walrusAngleTo = -5;
-    const walrusAngleAnimations = [
-      () => animateEasing(walrusAngleAnimationTick(walrusAngleFrom, walrusAngleTo), 500, symmetricalEase),
-      () => animateEasing(walrusAngleAnimationTick(walrusAngleTo, walrusAngleStart), 500, symmetricalEase)
-    ];
-
-    animateEasing(walrusAngleAnimationTick(walrusAngleStart, walrusAngleFrom), 3000, symmetricalEase)
-      .then(() => {
-        runSerial(walrusAngleAnimations);
-      });
-  }
-
-  startAnimationInfinite() {
-    const globalAnimationTick = () => {
-      this.drawScene();
-    };
-
-    const animations = [
-      () => animateDuration(globalAnimationTick, 6000)
-    ];
-
-    runSerial(animations).then(this.startAnimationInfinite.bind(this));
-  }
-
-
-  startAnimation() {
-    if (!this.isAnimated) {
-      this.isAnimated = true;
-
-      const globalAnimationTick = (globalProgress) => {
-        const showWalrusAnimationDelay = 0;
-        const snowflakeAnimationDelay = 1500;
-
-        if (globalProgress >= showWalrusAnimationDelay && this.startAnimations.indexOf(showWalrusAnimationDelay) < 0) {
-          this.startAnimations.push(showWalrusAnimationDelay);
-
-          this.animateWalrusFluctuations();
-          this.startAnimationInfinite();
-        }
-
-        if (globalProgress >= snowflakeAnimationDelay && this.startAnimations.indexOf(snowflakeAnimationDelay) < 0) {
-          this.startAnimations.push(snowflakeAnimationDelay);
-
-          this.animateSnowflake();
-        }
-      };
-
-      animateDuration(globalAnimationTick, 6000);
-    }
   }
 }
