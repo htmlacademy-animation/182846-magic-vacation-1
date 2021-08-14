@@ -1,4 +1,5 @@
 import WalrusScene from './walrus-canvas-animation.js';
+import CrocodileScene from './crocodile-canvas-animation.js';
 
 export default () => {
   const winLetters = document.querySelectorAll(`.win-heading path`);
@@ -30,6 +31,9 @@ export default () => {
         document.querySelectorAll(`.lose-heading animate`).forEach((animate) => {
           animate.beginElement();
         });
+
+        const animationCrocodile = new CrocodileScene();
+        animationCrocodile.start();
       }
     });
   });
